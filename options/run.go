@@ -34,7 +34,6 @@ type RunOptions struct {
 }
 
 var RequiredRunFlags = []string{
-	"outfile",
 	"step",
 }
 

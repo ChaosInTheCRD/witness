@@ -19,6 +19,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	witness "github.com/in-toto/go-witness"
 	"github.com/in-toto/go-witness/archivista"
@@ -70,9 +71,15 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 		return fmt.Errorf("no signers found")
 	}
 
-	out, err := loadOutfile(ro.OutFilePath)
-	if err != nil {
-		return fmt.Errorf("failed to open out file: %w", err)
+	var out *os.File
+	if ro.OutFilePath != "" {
+		var err error
+		out, err = loadOutfile(ro.OutFilePath)
+		if err != nil {
+			return fmt.Errorf("failed to open out file: %w", err)
+		}
+	} else if !ro.ArchivistaOptions.Enable {
+		return fmt.Errorf("must specify out file or enable archivista")
 	}
 
 	timestampers := []dsse.Timestamper{}
