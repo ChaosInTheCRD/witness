@@ -79,7 +79,7 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 			return fmt.Errorf("failed to open out file: %w", err)
 		}
 	} else if !ro.ArchivistaOptions.Enable {
-		return fmt.Errorf("must specify out file or enable archivista")
+		return fmt.Errorf("either --outfile or --enable-archivista must be specified")
 	}
 
 	timestampers := []dsse.Timestamper{}
