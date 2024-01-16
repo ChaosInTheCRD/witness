@@ -23,7 +23,9 @@ type VerifyOptions struct {
 	PolicyFilePath       string
 	ArtifactFilePath     string
 	AdditionalSubjects   []string
-	CAPaths              []string
+	PolicyRoots          []string
+	PolicyIntermediates  []string
+	PolicyTSARoots       []string
 }
 
 func (vo *VerifyOptions) AddFlags(cmd *cobra.Command) {
@@ -33,6 +35,7 @@ func (vo *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&vo.PolicyFilePath, "policy", "p", "", "Path to the policy to verify")
 	cmd.Flags().StringVarP(&vo.ArtifactFilePath, "artifactfile", "f", "", "Path to the artifact to verify")
 	cmd.Flags().StringSliceVarP(&vo.AdditionalSubjects, "subjects", "s", []string{}, "Additional subjects to lookup attestations")
-	cmd.Flags().StringSliceVarP(&vo.CAPaths, "policy-ca", "", []string{}, "Paths to CA certificates to use for verifying the policy")
-
+	cmd.Flags().StringSliceVarP(&vo.PolicyRoots, "policy-ca", "", []string{}, "Paths to CA certificates to use for verifying the policy")
+	cmd.Flags().StringSliceVarP(&vo.PolicyIntermediates, "policy-ca-intermediates", "", []string{}, "Paths to intermediate certificates for the CA to use for verifying the policy")
+	cmd.Flags().StringSliceVarP(&vo.PolicyTSARoots, "policy-timestamp-server-ca", "", []string{}, "Paths to the CA certificates for Timestamp Authority Servers to use when verifying policy")
 }

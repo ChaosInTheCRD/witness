@@ -21,8 +21,7 @@ import (
 
 	witness "github.com/in-toto/go-witness"
 	"github.com/in-toto/go-witness/cryptoutil"
-	"github.com/in-toto/go-witness/dsse"
-	"github.com/in-toto/go-witness/timestamp"
+	"github.com/in-toto/witness/internal/sign"
 	"github.com/in-toto/witness/options"
 	"github.com/spf13/cobra"
 )
@@ -53,22 +52,7 @@ func SignCmd() *cobra.Command {
 	return cmd
 }
 
-// todo: this logic should be broken out and moved to pkg/
-// we need to abstract where keys are coming from, etc
 func runSign(ctx context.Context, so options.SignOptions, signers ...cryptoutil.Signer) error {
-	if len(signers) > 1 {
-		return fmt.Errorf("only one signer is supported")
-	}
-
-	if len(signers) == 0 {
-		return fmt.Errorf("no signers found")
-	}
-
-	timestampers := []dsse.Timestamper{}
-	for _, url := range so.TimestampServers {
-		timestampers = append(timestampers, timestamp.NewTimestamper(timestamp.TimestampWithUrl(url)))
-	}
-
 	inFile, err := os.Open(so.InFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open file to sign: %w", err)
@@ -78,7 +62,12 @@ func runSign(ctx context.Context, so options.SignOptions, signers ...cryptoutil.
 	if err != nil {
 		return err
 	}
-
 	defer outFile.Close()
-	return witness.Sign(inFile, so.DataType, outFile, dsse.SignWithSigners(signers[0]), dsse.SignWithTimestampers(timestampers...))
+
+	dsseOpts, err := sign.SignOpts(ctx, &so, signers...)
+	if err != nil {
+		return err
+	}
+
+	return witness.Sign(inFile, so.DataType, outFile, dsseOpts...)
 }

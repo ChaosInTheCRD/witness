@@ -16,21 +16,13 @@ package cmd
 
 import (
 	"context"
-	"crypto"
-	"encoding/json"
 	"fmt"
 
 	witness "github.com/in-toto/go-witness"
-	"github.com/in-toto/go-witness/archivista"
 	"github.com/in-toto/go-witness/attestation"
-	"github.com/in-toto/go-witness/attestation/commandrun"
-	"github.com/in-toto/go-witness/attestation/material"
-	"github.com/in-toto/go-witness/attestation/product"
 	"github.com/in-toto/go-witness/cryptoutil"
-	"github.com/in-toto/go-witness/dsse"
-	"github.com/in-toto/go-witness/log"
-	"github.com/in-toto/go-witness/registry"
-	"github.com/in-toto/go-witness/timestamp"
+	"github.com/in-toto/witness/internal/run"
+	"github.com/in-toto/witness/internal/util"
 	"github.com/in-toto/witness/options"
 	"github.com/spf13/cobra"
 )
@@ -62,85 +54,28 @@ func RunCmd() *cobra.Command {
 }
 
 func runRun(ctx context.Context, ro options.RunOptions, args []string, signers ...cryptoutil.Signer) error {
-	if len(signers) > 1 {
-		return fmt.Errorf("only one signer is supported")
-	}
-
-	if len(signers) == 0 {
-		return fmt.Errorf("no signers found")
-	}
-
 	out, err := loadOutfile(ro.OutFilePath)
 	if err != nil {
 		return fmt.Errorf("failed to open out file: %w", err)
 	}
-
-	timestampers := []dsse.Timestamper{}
-	for _, url := range ro.TimestampServers {
-		timestampers = append(timestampers, timestamp.NewTimestamper(timestamp.TimestampWithUrl(url)))
-	}
-
-	attestors := []attestation.Attestor{product.New(), material.New()}
-	if len(args) > 0 {
-		attestors = append(attestors, commandrun.New(commandrun.WithCommand(args), commandrun.WithTracing(ro.Tracing)))
-	}
-
-	addtlAttestors, err := attestation.Attestors(ro.Attestations)
-	if err != nil {
-		return fmt.Errorf("failed to create attestors := %w", err)
-	}
-
-	attestors = append(attestors, addtlAttestors...)
-	for _, attestor := range attestors {
-		setters, ok := ro.AttestorOptSetters[attestor.Name()]
-		if !ok {
-			continue
-		}
-
-		attestor, err = registry.SetOptions(attestor, setters...)
-		if err != nil {
-			return fmt.Errorf("failed to set attestor option for %v: %w", attestor.Type(), err)
-		}
-	}
-
-	var roHashes []crypto.Hash
-	for _, hashStr := range ro.Hashes {
-		hash, err := cryptoutil.HashFromString(hashStr)
-		if err != nil {
-			return fmt.Errorf("failed to parse hash: %w", err)
-		}
-		roHashes = append(roHashes, hash)
-	}
-
 	defer out.Close()
+
+	opts, err := run.RunOpts(ctx, &ro, args, signers...)
+	if err != nil {
+		return fmt.Errorf("failed to create run options: %w", err)
+	}
+
 	result, err := witness.Run(
 		ro.StepName,
 		signers[0],
-		witness.RunWithAttestors(attestors),
-		witness.RunWithAttestationOpts(attestation.WithWorkingDir(ro.WorkingDir), attestation.WithHashes(roHashes)),
-		witness.RunWithTimestampers(timestampers...),
+		opts...,
 	)
-
 	if err != nil {
 		return err
 	}
 
-	signedBytes, err := json.Marshal(&result.SignedEnvelope)
-	if err != nil {
-		return fmt.Errorf("failed to marshal envelope: %w", err)
-	}
-
-	if _, err := out.Write(signedBytes); err != nil {
+	if err := util.WriteAttestation(ctx, &result.SignedEnvelope, out, &ro.ArchivistaOptions); err != nil {
 		return fmt.Errorf("failed to write envelope to out file: %w", err)
-	}
-
-	if ro.ArchivistaOptions.Enable {
-		archivistaClient := archivista.New(ro.ArchivistaOptions.Url)
-		if gitoid, err := archivistaClient.Store(ctx, result.SignedEnvelope); err != nil {
-			return fmt.Errorf("failed to store artifact in archivista: %w", err)
-		} else {
-			log.Infof("Stored in archivista as %v\n", gitoid)
-		}
 	}
 
 	return nil

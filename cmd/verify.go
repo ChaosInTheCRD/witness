@@ -16,18 +16,15 @@ package cmd
 
 import (
 	"context"
-	"crypto"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
 	witness "github.com/in-toto/go-witness"
-	"github.com/in-toto/go-witness/archivista"
 	"github.com/in-toto/go-witness/cryptoutil"
 	"github.com/in-toto/go-witness/dsse"
 	"github.com/in-toto/go-witness/log"
-	"github.com/in-toto/go-witness/source"
+	"github.com/in-toto/witness/internal/util"
+	"github.com/in-toto/witness/internal/verify"
 	"github.com/in-toto/witness/options"
 	"github.com/spf13/cobra"
 )
@@ -42,7 +39,11 @@ func VerifyCmd() *cobra.Command {
 		SilenceUsage:      true,
 		DisableAutoGenTag: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runVerify(cmd.Context(), vo)
+			verifiers, err := verify.VerifiersFromOpts(cmd.Context(), &vo)
+			if err != nil {
+				return fmt.Errorf("failed to load verifiers: %w", err)
+			}
+			return runVerify(cmd.Context(), vo, verifiers...)
 		},
 	}
 	vo.AddFlags(cmd)
@@ -55,80 +56,32 @@ const (
 
 // todo: this logic should be broken out and moved to pkg/
 // we need to abstract where keys are coming from, etc
-func runVerify(ctx context.Context, vo options.VerifyOptions) error {
-	if vo.KeyPath == "" && len(vo.CAPaths) == 0 {
-		return fmt.Errorf("must suply public key or ca paths")
-	}
-
-	var verifier cryptoutil.Verifier
-	if vo.KeyPath != "" {
-		keyFile, err := os.Open(vo.KeyPath)
-		if err != nil {
-			return fmt.Errorf("failed to open key file: %w", err)
-		}
-		defer keyFile.Close()
-
-		verifier, err = cryptoutil.NewVerifierFromReader(keyFile)
-		if err != nil {
-			return fmt.Errorf("failed to create verifier: %w", err)
-		}
-
-	}
-
-	inFile, err := os.Open(vo.PolicyFilePath)
+func runVerify(ctx context.Context, vo options.VerifyOptions, verifiers ...cryptoutil.Verifier) error {
+	f, err := os.ReadFile(vo.PolicyFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to open file to sign: %w", err)
+		return fmt.Errorf("failed to read policy file: %w", err)
 	}
 
-	defer inFile.Close()
-	policyEnvelope := dsse.Envelope{}
-	decoder := json.NewDecoder(inFile)
-	if err := decoder.Decode(&policyEnvelope); err != nil {
-		return fmt.Errorf("could not unmarshal policy envelope: %w", err)
+	policyEnvelope := &dsse.Envelope{}
+	// reusing this function to marshal the policy envelope. We don't want to push the policy to archivista and have set the option appropriately.
+	err = util.WriteAttestation(ctx, f, policyEnvelope, &options.ArchivistaOptions{Enable: false})
+	if err != nil {
+		return fmt.Errorf("failed to marshal policy: %w", err)
 	}
 
-	subjects := []cryptoutil.DigestSet{}
-	if len(vo.ArtifactFilePath) > 0 {
-		artifactDigestSet, err := cryptoutil.CalculateDigestSetFromFile(vo.ArtifactFilePath, []crypto.Hash{crypto.SHA256})
-		if err != nil {
-			return fmt.Errorf("failed to calculate artifact digest: %w", err)
-		}
-
-		subjects = append(subjects, artifactDigestSet)
-	}
-
-	for _, subDigest := range vo.AdditionalSubjects {
-		subjects = append(subjects, cryptoutil.DigestSet{cryptoutil.DigestValue{Hash: crypto.SHA256, GitOID: false}: subDigest})
-	}
-
-	if len(subjects) == 0 {
-		return errors.New("at least one subject is required, provide an artifact file or subject")
-	}
-
-	var collectionSource source.Sourcer
-	memSource := source.NewMemorySource()
-	for _, path := range vo.AttestationFilePaths {
-		if err := memSource.LoadFile(path); err != nil {
-			return fmt.Errorf("failed to load attestation file: %w", err)
-		}
-	}
-
-	collectionSource = memSource
-	if vo.ArchivistaOptions.Enable {
-		collectionSource = source.NewMultiSource(collectionSource, source.NewArchvistSource(archivista.New(vo.ArchivistaOptions.Url)))
+	opts, err := verify.VerifyOpts(ctx, &vo)
+	if err != nil {
+		return fmt.Errorf("failed to load verify options: %w", err)
 	}
 
 	verifiedEvidence, err := witness.Verify(
 		ctx,
-		policyEnvelope,
-		[]cryptoutil.Verifier{verifier},
-		witness.VerifyWithSubjectDigests(subjects),
-		witness.VerifyWithCollectionSource(collectionSource),
+		*policyEnvelope,
+		verifiers,
+		opts...,
 	)
-
 	if err != nil {
 		return fmt.Errorf("failed to verify policy: %w", err)
-
 	}
 
 	log.Info("Verification succeeded")
@@ -142,5 +95,4 @@ func runVerify(ctx context.Context, vo options.VerifyOptions) error {
 	}
 
 	return nil
-
 }
