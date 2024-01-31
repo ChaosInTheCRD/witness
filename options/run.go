@@ -31,18 +31,20 @@ type RunOptions struct {
 	Tracing            bool
 	TimestampServers   []string
 	AttestorOptSetters map[string][]func(attestation.Attestor) (attestation.Attestor, error)
+	CustomAttestors    []string
 }
 
 func (ro *RunOptions) AddFlags(cmd *cobra.Command) {
 	ro.SignerOptions.AddFlags(cmd)
 	ro.ArchivistaOptions.AddFlags(cmd)
 	cmd.Flags().StringVarP(&ro.WorkingDir, "workingdir", "d", "", "Directory from which commands will run")
-	cmd.Flags().StringSliceVarP(&ro.Attestations, "attestations", "a", []string{"environment", "git"}, "Attestations to record ('product' and 'material' are always recorded)")
+	cmd.Flags().StringSliceVarP(&ro.Attestations, "attestations", "a", []string{}, "Attestations to record ('product' and 'material' are always recorded)")
 	cmd.Flags().StringSliceVar(&ro.Hashes, "hashes", []string{"sha256"}, "Hashes selected for digest calculation. Defaults to SHA256")
 	cmd.Flags().StringVarP(&ro.OutFilePath, "outfile", "o", "", "File to which to write signed data.  Defaults to stdout")
 	cmd.Flags().StringVarP(&ro.StepName, "step", "s", "", "Name of the step being run")
 	cmd.Flags().BoolVar(&ro.Tracing, "trace", false, "Enable tracing for the command")
 	cmd.Flags().StringSliceVar(&ro.TimestampServers, "timestamp-servers", []string{}, "Timestamp Authority Servers to use when signing envelope")
+	cmd.Flags().StringSliceVar(&ro.CustomAttestors, "custom-attestors", []string{}, "Custom attestors to run with witness")
 
 	attestationRegistrations := attestation.RegistrationEntries()
 	ro.AttestorOptSetters = addFlagsFromRegistry("attestor", attestationRegistrations, cmd)

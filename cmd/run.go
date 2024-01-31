@@ -16,16 +16,14 @@ package cmd
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
+	"os"
 
 	witness "github.com/in-toto/go-witness"
 	"github.com/in-toto/go-witness/archivista"
 	"github.com/in-toto/go-witness/attestation"
 	"github.com/in-toto/go-witness/attestation/commandrun"
-	"github.com/in-toto/go-witness/attestation/material"
-	"github.com/in-toto/go-witness/attestation/product"
 	"github.com/in-toto/go-witness/cryptoutil"
 	"github.com/in-toto/go-witness/log"
 	"github.com/in-toto/go-witness/registry"
@@ -79,7 +77,7 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 		timestampers = append(timestampers, timestamp.NewTimestamper(timestamp.TimestampWithUrl(url)))
 	}
 
-	attestors := []attestation.Attestor{product.New(), material.New()}
+	attestors := []attestation.Attestor{}
 	if len(args) > 0 {
 		attestors = append(attestors, commandrun.New(commandrun.WithCommand(args), commandrun.WithTracing(ro.Tracing)))
 	}
@@ -104,6 +102,28 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 		}
 	}
 
+	for _, a := range ro.CustomAttestors {
+		f, err := os.ReadFile(a)
+		if err != nil {
+			return fmt.Errorf("failed to read custom attestor file: %w", err)
+		}
+
+		var definition attestation.CustomAttestorDefinition
+		err = json.Unmarshal(f, &definition)
+		if err != nil {
+			return fmt.Errorf("failed to unmarshal custom attestor definition: %w", err)
+		}
+
+		attestation.RegisterCustomAttestation(definition)
+		attestor, err := attestation.GetAttestor(definition.Metadata.Type)
+		if err != nil {
+			return fmt.Errorf("failed to create attestor: %w", err)
+		}
+
+		attestors = append(attestors, attestor)
+
+	}
+
 	for _, attestor := range attestors {
 		setters, ok := ro.AttestorOptSetters[attestor.Name()]
 		if !ok {
@@ -116,13 +136,13 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 		}
 	}
 
-	var roHashes []crypto.Hash
+	var roHashes []cryptoutil.DigestValue
 	for _, hashStr := range ro.Hashes {
 		hash, err := cryptoutil.HashFromString(hashStr)
 		if err != nil {
 			return fmt.Errorf("failed to parse hash: %w", err)
 		}
-		roHashes = append(roHashes, hash)
+		roHashes = append(roHashes, cryptoutil.DigestValue{Hash: hash})
 	}
 
 	defer out.Close()
