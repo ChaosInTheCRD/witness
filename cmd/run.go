@@ -24,6 +24,7 @@ import (
 	"github.com/in-toto/go-witness/archivista"
 	"github.com/in-toto/go-witness/attestation"
 	"github.com/in-toto/go-witness/attestation/commandrun"
+	"github.com/in-toto/go-witness/attestation/custom"
 	"github.com/in-toto/go-witness/cryptoutil"
 	"github.com/in-toto/go-witness/log"
 	"github.com/in-toto/go-witness/registry"
@@ -108,14 +109,14 @@ func runRun(ctx context.Context, ro options.RunOptions, args []string, signers .
 			return fmt.Errorf("failed to read custom attestor file: %w", err)
 		}
 
-		var definition attestation.CustomAttestorDefinition
-		err = json.Unmarshal(f, &definition)
+		var custom custom.CustomAttestor
+		err = json.Unmarshal(f, &custom.Definition)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal custom attestor definition: %w", err)
 		}
 
-		attestation.RegisterCustomAttestation(definition)
-		attestor, err := attestation.GetAttestor(definition.Metadata.Type)
+		attestation.RegisterCustomAttestation(&custom)
+		attestor, err := attestation.GetAttestor(custom.Definition.Metadata.Type)
 		if err != nil {
 			return fmt.Errorf("failed to create attestor: %w", err)
 		}
