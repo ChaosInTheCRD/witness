@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "https://witness.in-toto.chaosinthe.dev"
+      "destination": "/docs"
     }
   ]
 }
