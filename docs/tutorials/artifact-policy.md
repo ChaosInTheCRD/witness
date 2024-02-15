@@ -1,5 +1,7 @@
 # Verifying an Artifact with a Witness Policy
 
+We are inserting a test change here to just make sure this all works.
+
 <span class="tip-text">💡 Tip: If this is your first time using Witness, you might benefit from trying the <a href="./getting-started.md">Getting Started</a> tutorial first!</span>
 
 ## Intro
