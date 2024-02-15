@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "https://witness.in-toto.chaosinthe.dev"
+    }
+  ]
+}
