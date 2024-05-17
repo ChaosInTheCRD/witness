@@ -191,7 +191,34 @@ witness verify [flags]
       --policy-organizations strings                        The organizations to use when verifying a policy signed with x.509 (default [*])
       --policy-timestamp-servers strings                    Paths to the CA certificates for Timestamp Authority Servers to use when verifying policy signed with x.509
       --policy-uris strings                                 The URIs to use when verifying a policy signed with x.509 (default [*])
-  -k, --publickey string                                    Path to the policy signer's public key
+      --publickey string                                    Path to the policy signer's public key
+      --signer-file-cert-path string                        Path to the file containing the certificate for the private key
+      --signer-file-intermediate-paths strings              Paths to files containing intermediates required to establish trust of the signer's certificate to a root
+  -k, --signer-file-key-path string                         Path to the file containing the private key
+      --signer-fulcio-oidc-client-id string                 OIDC client ID to use for authentication
+      --signer-fulcio-oidc-issuer string                    OIDC issuer to use for authentication
+      --signer-fulcio-oidc-redirect-url string              OIDC redirect URL (Optional). The default oidc-redirect-url is 'http://localhost:0/auth/callback'.
+      --signer-fulcio-token string                          Raw token string to use for authentication to fulcio (cannot be used in conjunction with --fulcio-token-path)
+      --signer-fulcio-token-path string                     Path to the file containing a raw token to use for authentication to fulcio (cannot be used in conjunction with --fulcio-token)
+      --signer-fulcio-url string                            Fulcio address to sign with
+      --signer-kms-aws-config-file string                   The shared configuration file to use with the AWS KMS signer provider
+      --signer-kms-aws-credentials-file string              The shared credentials file to use with the AWS KMS signer provider
+      --signer-kms-aws-insecure-skip-verify                 Skip verification of the server's certificate chain and host name
+      --signer-kms-aws-profile string                       The shared configuration profile to use with the AWS KMS signer provider
+      --signer-kms-aws-remote-verify                        verify signature using AWS KMS remote verification. If false, the public key will be pulled from AWS KMS and verification will take place locally (default true)
+      --signer-kms-gcp-credentials-file string              The credentials file to use with the GCP KMS signer provider
+      --signer-kms-hashType string                          The hash type to use for signing (default "sha256")
+      --signer-kms-keyVersion string                        The key version to use for signing
+      --signer-kms-ref string                               The KMS Reference URI to use for connecting to the KMS service
+      --signer-spiffe-socket-path string                    Path to the SPIFFE Workload API Socket
+      --signer-vault-altnames strings                       Alt names to use for the generated certificate. All alt names must be allowed by the vault role policy
+      --signer-vault-commonname string                      Common name to use for the generated certificate. Must be allowed by the vault role policy
+      --signer-vault-namespace string                       Vault namespace to use
+      --signer-vault-pki-secrets-engine-path string         Path to the Vault PKI Secrets Engine to use (default "pki")
+      --signer-vault-role string                            Name of the Vault role to generate the certificate for
+      --signer-vault-token string                           Token to use to connect to Vault
+      --signer-vault-ttl duration                           Time to live for the generated certificate. Defaults to the vault role policy's configured TTL if not provided
+      --signer-vault-url string                             Base url of the Vault instance to connect to
   -s, --subjects strings                                    Additional subjects to lookup attestations
       --verifier-kms-aws-config-file string                 The shared configuration file to use with the AWS KMS signer provider
       --verifier-kms-aws-credentials-file string            The shared credentials file to use with the AWS KMS signer provider
@@ -202,6 +229,9 @@ witness verify [flags]
       --verifier-kms-hashType string                        The hash type used for verifying (default "sha256")
       --verifier-kms-keyVersion string                      The key version to use for signing
       --verifier-kms-ref string                             The KMS Reference URI to use for connecting to the KMS service
+      --vsa-enable                                          Enable Verification Summary Attestation (VSA) verification
+      --vsa-outfile string                                  File to write Verification Summary Attestation (VSA) verification results to
+      --vsa-timestamp-servers strings                       Timestamp Authority Servers to use when signing Verification Summary Attestation (VSA)
 ```
 
 ### Options inherited from parent commands
