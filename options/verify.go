@@ -22,7 +22,10 @@ import (
 type VerifyOptions struct {
 	ArchivistaOptions          ArchivistaOptions
 	VerifierOptions            VerifierOptions
+	SignerOptions              SignerOptions
 	KMSVerifierProviderOptions KMSVerifierProviderOptions
+	KMSSignerProviderOptions   KMSSignerProviderOptions
+	VSAOptions                 VSAOptions
 	KeyPath                    string
 	AttestationFilePaths       []string
 	PolicyFilePath             string
@@ -37,6 +40,13 @@ type VerifyOptions struct {
 	PolicyEmails               []string
 	PolicyOrganizations        []string
 	PolicyURIs                 []string
+}
+
+type VSAOptions struct {
+	Enable           bool
+	SignerKeyPath    string
+	OutFilePath      string
+	TimestampServers []string
 }
 
 var RequiredVerifyFlags = []string{
@@ -58,9 +68,14 @@ var OneRequiredSubjectFlags = []string{
 
 func (vo *VerifyOptions) AddFlags(cmd *cobra.Command) {
 	vo.VerifierOptions.AddFlags(cmd)
+	vo.SignerOptions.AddFlags(cmd)
 	vo.ArchivistaOptions.AddFlags(cmd)
 	vo.KMSVerifierProviderOptions.AddFlags(cmd)
-	cmd.Flags().StringVarP(&vo.KeyPath, "publickey", "k", "", "Path to the policy signer's public key")
+	vo.KMSSignerProviderOptions.AddFlags(cmd)
+	cmd.Flags().StringVar(&vo.KeyPath, "publickey", "", "Path to the policy signer's public key")
+	cmd.Flags().BoolVar(&vo.VSAOptions.Enable, "vsa-enable", false, "Enable Verification Summary Attestation (VSA) verification")
+	cmd.Flags().StringVar(&vo.VSAOptions.OutFilePath, "vsa-outfile", "", "File to write Verification Summary Attestation (VSA) verification results to")
+	cmd.Flags().StringSliceVar(&vo.VSAOptions.TimestampServers, "vsa-timestamp-servers", []string{}, "Timestamp Authority Servers to use when signing Verification Summary Attestation (VSA)")
 	cmd.Flags().StringSliceVarP(&vo.AttestationFilePaths, "attestations", "a", []string{}, "Attestation files to test against the policy")
 	cmd.Flags().StringVarP(&vo.PolicyFilePath, "policy", "p", "", "Path to the policy to verify")
 	cmd.Flags().StringVarP(&vo.ArtifactFilePath, "artifactfile", "f", "", "Path to the artifact to verify")

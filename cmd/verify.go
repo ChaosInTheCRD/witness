@@ -38,7 +38,10 @@ func VerifyCmd() *cobra.Command {
 	vo := options.VerifyOptions{
 		ArchivistaOptions:          options.ArchivistaOptions{},
 		KMSVerifierProviderOptions: options.KMSVerifierProviderOptions{},
+		KMSSignerProviderOptions:   options.KMSSignerProviderOptions{},
+		SignerOptions:              options.SignerOptions{},
 		VerifierOptions:            options.VerifierOptions{},
+		VSAOptions:                 options.VSAOptions{},
 	}
 	cmd := &cobra.Command{
 		Use:               "verify",
